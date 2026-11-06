@@ -1,6 +1,7 @@
 import { Control, ControlPosition, DomEvent, DomUtil } from "leaflet";
 import { ControlPane } from "./ControlPane";
 import { LayersControl } from "./LayersControl";
+import { PlayerControl } from "./PlayerControl";
 import { LocalStorage } from "../LocalStorage";
 import { ZoomControl } from "./ZoomControl";
 
@@ -74,6 +75,10 @@ export class ControlDock extends Control {
 
   public addLayers(layers: LayersControl): void {
     this.group2.appendChild(layers.getButtons());
+  }
+
+  public addPlayer(player: PlayerControl): void {
+    this.group2.appendChild(player.getButtons());
   }
 
   public addZoom(zoom: ZoomControl): void {

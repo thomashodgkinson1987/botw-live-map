@@ -4,6 +4,7 @@ import { ICategory } from "./common/ICategory";
 import { Layer } from "./common/Layer";
 import { ZDMap } from "./common/ZDMap";
 import { attachSaveSync } from "./common/SaveSync";
+import { attachPlayerSync } from "./common/PlayerSync";
 
 const JSON_VER = "1";
 
@@ -204,4 +205,5 @@ window.onload = async () => {
 
   await map.initializeWikiConnector();
   attachSaveSync(map);
+  attachPlayerSync(map);
 };

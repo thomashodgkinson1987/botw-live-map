@@ -544,6 +544,60 @@ body {
   line-height: 50px;
 }
 
+/* PLAYER MARKER */
+.zd-player {
+  pointer-events: none;
+}
+
+.zd-player__dot {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #3d8bff;
+  border: 2px solid #fff;
+  box-shadow:
+    0 0 6px rgba(61, 139, 255, 0.9),
+    0 0 2px rgba(0, 0, 0, 0.6);
+}
+
+.zd-player__halo {
+  position: absolute;
+  left: 9px;
+  top: 9px;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  margin-top: -9px;
+  border-radius: 50%;
+  border: 2px solid rgba(90, 165, 255, 0.85);
+  animation: zd-player-pulse 2s ease-out infinite;
+}
+
+@keyframes zd-player-pulse {
+  0% {
+    transform: scale(0.55);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zd-player__halo {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
+.zd-control__button.selected .fas {
+  color: #79c1ff;
+}
+
 /* POPUPS */
 
 .zd-popup__loading-indicator {

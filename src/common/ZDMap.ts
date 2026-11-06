@@ -5,6 +5,7 @@ import {
   Options as ObjectsControlOptions,
 } from "./Controls/ObjectsControl";
 import { ControlDock } from "./Controls/ControlDock";
+import { PlayerControl } from "./Controls/PlayerControl";
 import { dom } from "@fortawesome/fontawesome-svg-core";
 import { Dialog } from "./Dialog";
 import { FilterControl } from "./Controls/FilterControl";
@@ -41,6 +42,7 @@ export class ZDMap extends Map {
   private filterControl?: FilterControl;
   private settingsControl?: SettingsControl;
   private layersControl?: LayersControl;
+  private controlDock?: ControlDock;
   private toastControl = new ToastControl();
 
   private constructor(
@@ -166,7 +168,8 @@ export class ZDMap extends Map {
     handlers: ZDHandler[] = []
   ): void {
     const settingsStore = LocalStorage.getStore(this.directory, "settings");
-    const controls = new ControlDock(settingsStore);
+    this.controlDock = new ControlDock(settingsStore);
+    const controls = this.controlDock;
     controls.addTo(this);
 
     // Search
@@ -242,6 +245,11 @@ export class ZDMap extends Map {
         "https://www.zeldadungeon.net/marathon"
       );
     }
+  }
+
+  /** Adds the player-position control to the dock (called by the player-sync feature when enabled). */
+  public addPlayerControl(player: PlayerControl): void {
+    this.controlDock?.addPlayer(player);
   }
 
   public addLegend(categories: ICategory[] = [], group?: string): void {

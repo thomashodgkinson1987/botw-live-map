@@ -2,6 +2,7 @@ import { createMpaPlugin, createPages } from "vite-plugin-virtual-mpa";
 import { defineConfig, loadEnv } from "vite";
 import type { Plugin, ViteDevServer } from "vite";
 import { readFileSync, readdirSync, statSync } from "fs";
+import net from "net";
 import type { IncomingMessage, ServerResponse } from "http";
 import path from "path";
 
@@ -202,6 +203,108 @@ function botwSaveStatePlugin(saveDir: string): Plugin {
   };
 }
 
+const PLAYER_POS_PORT = 7777;
+const PLAYER_POS_HOST = "127.0.0.1";
+
+/** Send one line to the Savage Wind control endpoint and read one reply line. */
+function controlCommand(
+  command: string,
+  cb: (err: Error | null, reply?: string) => void
+): void {
+  const conn = net.connect(PLAYER_POS_PORT, PLAYER_POS_HOST);
+  let done = false;
+  const finish = (err: Error | null, reply?: string) => {
+    if (done) return;
+    done = true;
+    conn.destroy();
+    cb(err, reply);
+  };
+  conn.setTimeout(800, () =>
+    finish(new Error("reply timed out (is the game running with SAVAGEWIND_CONTROL set?)"))
+  );
+  conn.once("error", (err) =>
+    finish(
+      new Error(
+        `could not reach the game on ${PLAYER_POS_HOST}:${PLAYER_POS_PORT} (${String(
+          err
+        )}) — launch the game with SAVAGEWIND_CONTROL=${PLAYER_POS_PORT}`
+      )
+    )
+  );
+  let buf = "";
+  conn.on("data", (chunk) => {
+    buf += String(chunk);
+    const nl = buf.indexOf("\n");
+    if (nl >= 0) finish(null, buf.slice(0, nl));
+  });
+  conn.on("connect", () => conn.write(command + "\n"));
+  conn.on("close", () =>
+    finish(null, buf.trim() ? buf : undefined)
+  );
+}
+
+/**
+ * Dev-server-only endpoint reporting Link's position read live from the
+ * Savage Wind control socket. Used by the map's Player layer.
+ */
+function botwPlayerPosPlugin(): Plugin {
+  function sendJson(res: ServerResponse, status: number, body: unknown): void {
+    res.statusCode = status;
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Cache-Control", "no-store");
+    res.end(JSON.stringify(body));
+  }
+
+  function handle(req: IncomingMessage, res: ServerResponse): void {
+    if (req.method !== "GET") {
+      sendJson(res, 405, { ok: false, error: "Use GET." });
+      return;
+    }
+    controlCommand("pos", (err, reply) => {
+      if (err || !reply) {
+        sendJson(res, 200, {
+          ok: false,
+          error: err?.message ?? "no reply from the game",
+        });
+        return;
+      }
+      let parsed: {
+        ok?: boolean;
+        error?: string;
+        data?: { x?: number; y?: number; z?: number; stamina?: number; place?: string };
+      };
+      try {
+        parsed = JSON.parse(reply);
+      } catch (ex) {
+        sendJson(res, 200, { ok: false, error: `invalid reply: ${String(ex)}` });
+        return;
+      }
+      if (parsed.ok !== true || typeof parsed.data?.x !== "number") {
+        sendJson(res, 200, {
+          ok: false,
+          error: parsed.error ?? "position not available (no world loaded?)",
+        });
+        return;
+      }
+      sendJson(res, 200, {
+        ok: true,
+        x: parsed.data.x,
+        y: parsed.data.y,
+        z: parsed.data.z,
+        stamina: parsed.data.stamina,
+        place: parsed.data.place,
+      });
+    });
+  }
+
+  return {
+    name: "botw-player-pos",
+    configureServer(server: ViteDevServer) {
+      server.middlewares.use("/player-pos", handle);
+    },
+  };
+}
+
 // tslint:disable-next-line:no-default-export vite convention
 export default defineConfig(({ command, mode, ssrBuild }) => {
   const localEnv = loadEnv(mode, __dirname, "");
@@ -214,6 +317,7 @@ export default defineConfig(({ command, mode, ssrBuild }) => {
         pages,
       }),
       botwSaveStatePlugin(saveDir),
+      botwPlayerPosPlugin(),
     ],
     resolve: {
       alias: {
