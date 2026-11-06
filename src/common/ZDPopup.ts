@@ -1,6 +1,6 @@
 import { DomEvent, DomUtil, Popup } from "leaflet";
 import { dom, library } from "@fortawesome/fontawesome-svg-core";
-import { WikiConnector, WIKI_ORIGIN } from "./WikiConnector";
+import { WikiConnector, wikiArticleUrl, IS_LOCAL } from "./WikiConnector";
 import { faCheck } from "@fortawesome/free-solid-svg-icons/faCheck";
 import { faCircleNotch } from "@fortawesome/free-solid-svg-icons/faCircleNotch";
 import { faEdit } from "@fortawesome/free-solid-svg-icons/faEdit";
@@ -55,7 +55,7 @@ export class ZDPopup extends Popup {
     if (options.link) {
       const link = DomUtil.create("a", "", title);
       link.setAttribute("target", "_blank");
-      link.setAttribute("href", `${WIKI_ORIGIN}/wiki/${encodeURIComponent(options.link)}`);
+      link.setAttribute("href", wikiArticleUrl(options.link));
       link.innerText = options.name;
     } else {
       title.innerText = options.name;
@@ -161,10 +161,20 @@ export class ZDPopup extends Popup {
 
   public loadDynamicContent(): void {
     // Don't load if there's nothing to load or it's already loaded
-    if (
-      !this.myOptions.infoSource ||
-      this.contentState !== ContentState.Initial
-    ) {
+    if (this.contentState !== ContentState.Initial) {
+      return;
+    }
+
+    // Local dev: the wiki can't be reached (it sits behind a challenge),
+    // so render an offline panel with a link to the article on zeldadungeon.net
+    // instead of attempting the request and failing every time
+    if (IS_LOCAL) {
+      this.showOfflinePanel();
+      return;
+    }
+
+    // Some markers carry no wiki content at all
+    if (!this.myOptions.infoSource) {
       return;
     }
 
@@ -209,6 +219,32 @@ export class ZDPopup extends Popup {
       );
       this.loadContentFromQuery(query);
     }
+  }
+
+  private showOfflinePanel(): void {
+    const linkParts =
+      this.myOptions.link && this.myOptions.link !== ""
+        ? this.myOptions.link.split("#")
+        : [];
+    const article =
+      linkParts[0] ||
+      (this.myOptions.id
+        ? `Map:Breath of the Wild/${this.myOptions.id}`
+        : "");
+
+    DomUtil.empty(this.body);
+    const message = DomUtil.create("p", "zd-popup__offline", this.body);
+    message.innerText =
+      "This copy of the map isn't connected to the Zelda Dungeon Wiki. ";
+    if (article) {
+      const anchor = DomUtil.create("a", "", message);
+      anchor.setAttribute("target", "_blank");
+      anchor.setAttribute("rel", "noopener");
+      anchor.setAttribute("href", wikiArticleUrl(article));
+      anchor.innerText = `Read the ${this.myOptions.name} guide on zeldadungeon.net`;
+    }
+    this.contentState = ContentState.Loaded;
+    this.setContent(this.container); // force popup to resize/recenter
   }
 
   public markCompleted(): void {
@@ -317,19 +353,13 @@ export class ZDPopup extends Popup {
     const error = DomUtil.create("div", "zd-popup__error-indicator", this.body);
     DomUtil.create("i", "fas fa-exclamation-circle fa-3x fa-fw", error);
     const message = DomUtil.create("p", "", this.body);
-    message.innerHTML =
-      "Failed to load content from the Zelda Dungeon Wiki. " +
-      "You can open the article in a new tab instead — if prompted, " +
-      "pass the browser check once, then try again.";
+    message.innerHTML = "Couldn't load content from the Zelda Dungeon Wiki.";
     const article = (this.myOptions.link || "").split("#")[0];
     if (article) {
       const anchor = DomUtil.create("a", "", this.body);
       anchor.setAttribute("target", "_blank");
       anchor.setAttribute("rel", "noopener");
-      anchor.setAttribute(
-        "href",
-        `${WIKI_ORIGIN}/wiki/${encodeURIComponent(article)}`
-      );
+      anchor.setAttribute("href", wikiArticleUrl(article));
       anchor.innerText = "Open on zeldadungeon.net";
     }
   }

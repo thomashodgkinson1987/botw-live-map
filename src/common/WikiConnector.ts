@@ -9,6 +9,13 @@ const LOCAL =
  * rather than localhost.
  */
 export const WIKI_ORIGIN = LOCAL ? "https://www.zeldadungeon.net" : "";
+export const IS_LOCAL = LOCAL;
+
+/** URL for a wiki article path; preserves slashes and colons. */
+export function wikiArticleUrl(article: string): string {
+  const encoded = article.split("/").map(encodeURIComponent).join("/");
+  return `${WIKI_ORIGIN}/wiki/${encoded}`;
+}
 
 export interface User {
   id: number;
