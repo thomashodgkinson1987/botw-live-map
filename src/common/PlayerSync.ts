@@ -12,9 +12,9 @@ interface PlayerPosResponse {
   place?: string;
 }
 
-/** Zeldadungeon map coordinate for a world (x, y) point. Same transform as the rest of the map. */
-function worldToMap(x: number, y: number): LatLng {
-  return new LatLng(-2 * y, 2 * x);
+/** Zeldadungeon map coordinate for a world (x, z) horizontal point; y is vertical and unused. Same transform as the rest of the map. */
+function worldToMap(x: number, z: number): LatLng {
+  return new LatLng(-2 * z, 2 * x);
 }
 
 /**
@@ -82,13 +82,17 @@ export class PlayerSync {
       return;
     }
 
-    if (!data.ok || typeof data.x !== "number" || typeof data.y !== "number") {
+    if (
+      !data.ok ||
+      typeof data.x !== "number" ||
+      typeof data.z !== "number"
+    ) {
       console.info("Player position unavailable:", data.error ?? "unknown error");
       this.hideMarker();
       return;
     }
 
-    const pos = worldToMap(data.x, data.y);
+    const pos = worldToMap(data.x, data.z);
     this.showMarker(pos, data.place);
   }
 
