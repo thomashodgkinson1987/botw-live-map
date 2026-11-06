@@ -3,6 +3,7 @@ import * as Schema from "./common/JSONSchema";
 import { ICategory } from "./common/ICategory";
 import { Layer } from "./common/Layer";
 import { ZDMap } from "./common/ZDMap";
+import { attachSaveSync } from "./common/SaveSync";
 
 const JSON_VER = "1";
 
@@ -202,4 +203,5 @@ window.onload = async () => {
   await Promise.allSettled([locations, pins, seeds, treasures, wiki]);
 
   await map.initializeWikiConnector();
+  attachSaveSync(map);
 };

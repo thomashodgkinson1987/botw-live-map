@@ -1,6 +1,6 @@
 import { DomEvent, DomUtil, Popup } from "leaflet";
 import { dom, library } from "@fortawesome/fontawesome-svg-core";
-import { WikiConnector } from "./WikiConnector";
+import { WikiConnector, WIKI_ORIGIN } from "./WikiConnector";
 import { faCheck } from "@fortawesome/free-solid-svg-icons/faCheck";
 import { faCircleNotch } from "@fortawesome/free-solid-svg-icons/faCircleNotch";
 import { faEdit } from "@fortawesome/free-solid-svg-icons/faEdit";
@@ -55,7 +55,7 @@ export class ZDPopup extends Popup {
     if (options.link) {
       const link = DomUtil.create("a", "", title);
       link.setAttribute("target", "_blank");
-      link.setAttribute("href", `/wiki/${encodeURIComponent(options.link)}`);
+      link.setAttribute("href", `${WIKI_ORIGIN}/wiki/${encodeURIComponent(options.link)}`);
       link.innerText = options.name;
     } else {
       title.innerText = options.name;
@@ -317,6 +317,20 @@ export class ZDPopup extends Popup {
     const error = DomUtil.create("div", "zd-popup__error-indicator", this.body);
     DomUtil.create("i", "fas fa-exclamation-circle fa-3x fa-fw", error);
     const message = DomUtil.create("p", "", this.body);
-    message.innerHTML = "Failed to load content";
+    message.innerHTML =
+      "Failed to load content from the Zelda Dungeon Wiki. " +
+      "You can open the article in a new tab instead — if prompted, " +
+      "pass the browser check once, then try again.";
+    const article = (this.myOptions.link || "").split("#")[0];
+    if (article) {
+      const anchor = DomUtil.create("a", "", this.body);
+      anchor.setAttribute("target", "_blank");
+      anchor.setAttribute("rel", "noopener");
+      anchor.setAttribute(
+        "href",
+        `${WIKI_ORIGIN}/wiki/${encodeURIComponent(article)}`
+      );
+      anchor.innerText = "Open on zeldadungeon.net";
+    }
   }
 }

@@ -269,6 +269,34 @@ export class ZDMap extends Map {
     }
   }
 
+  /**
+   * Replace the completion state of all save-synced markers to exactly what
+   * the given categories report (used by SaveSync to mirror the save file).
+   */
+  public applySaveCompletion(categories: {
+    [category: string]: { all: string[]; found: string[] };
+  }): void {
+    const completed = new Set<string>();
+    const known = new Set<string>();
+    for (const category of Object.values(categories)) {
+      for (const id of category.all) known.add(id);
+      for (const id of category.found) completed.add(id);
+    }
+
+    for (const layer of this.layers) {
+      for (const id of known) {
+        const marker = layer.getMarkerById(id);
+        if (!marker) continue;
+        const isCompleted = marker.tags.includes("Completed");
+        if (completed.has(id) && !isCompleted) {
+          marker.complete();
+        } else if (!completed.has(id) && isCompleted) {
+          marker.clearCompletion();
+        }
+      }
+    }
+  }
+
   // TODO move this whole function to MapLayer
   public addMarker(marker: ZDMarker, layer: MapLayer): void {
     marker.on("internallinkclicked", (event) => {

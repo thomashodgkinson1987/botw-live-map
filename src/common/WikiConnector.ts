@@ -3,6 +3,13 @@ import { LocalStorage } from "./LocalStorage";
 const LOCAL =
   location.hostname === "localhost" || location.hostname === "127.0.0.1";
 
+/**
+ * The wiki lives on zeldadungeon.net. When running the maps locally, wiki
+ * links (article URLs, edit links) still need to point at the real origin
+ * rather than localhost.
+ */
+export const WIKI_ORIGIN = LOCAL ? "https://www.zeldadungeon.net" : "";
+
 export interface User {
   id: number;
   name: string;
@@ -109,7 +116,9 @@ export class WikiConnector {
   }
 
   public getEditLink(pageTitle: string): string {
-    return `/wiki/index.php?action=edit&title=${encodeURIComponent(pageTitle)}`;
+    return `${WIKI_ORIGIN}/wiki/index.php?action=edit&title=${encodeURIComponent(
+      pageTitle
+    )}`;
   }
 
   public getMapEditLink(subpage: string): string {
@@ -117,11 +126,21 @@ export class WikiConnector {
   }
 
   public async getLoggedInUser(): Promise<void> {
-    const response = await this.callApi<UserInfoResponse>(
-      "action=query&meta=userinfo"
-    );
-    if (response.query.userinfo.id !== 0) {
-      this.user = response.query.userinfo;
+    try {
+      const response = await this.callApi<UserInfoResponse>(
+        "action=query&meta=userinfo"
+      );
+      if (response.query.userinfo.id !== 0) {
+        this.user = response.query.userinfo;
+      }
+    } catch (ex) {
+      // Wiki unreachable (e.g. localhost without network access, or the
+      // wiki being behind a challenge). Fall back to offline/local mode
+      // rather than breaking completion loading entirely.
+      console.warn(
+        "Zelda Dungeon Wiki unreachable; continuing in offline mode.",
+        ex
+      );
     }
   }
 
@@ -152,14 +171,25 @@ export class WikiConnector {
       return localCompletion;
     }
 
-    const wikiCompletionResponse = (
-      await this.callApi<CompletionResponse>(
-        `action=query&list=map_userdata&zdm_map=${this.mapid}`
-      )
-    ).query.map_userdata.completed;
-    let wikiCompletion = wikiCompletionResponse
-      ? wikiCompletionResponse.split(",").map((m) => m.replace("%2C", ","))
-      : [];
+    let wikiCompletion: string[];
+    try {
+      const wikiCompletionResponse = (
+        await this.callApi<CompletionResponse>(
+          `action=query&list=map_userdata&zdm_map=${this.mapid}`
+        )
+      ).query.map_userdata.completed;
+      wikiCompletion = wikiCompletionResponse
+        ? wikiCompletionResponse.split(",").map((m) => m.replace("%2C", ","))
+        : [];
+    } catch (ex) {
+      // Wiki unreachable mid-session: keep showing local completion
+      // rather than breaking initialization.
+      console.warn(
+        "Could not load completion data from the wiki; using local data.",
+        ex
+      );
+      return localCompletion;
+    }
 
     if (localCompletion.length > 0 && wikiCompletion.length > 0) {
       const actionReplace = "Replace account data with local data";
