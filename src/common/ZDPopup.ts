@@ -166,10 +166,12 @@ export class ZDPopup extends Popup {
     }
 
     // Local dev: the wiki can't be reached (it sits behind a challenge),
-    // so render an offline panel with a link to the article on zeldadungeon.net
-    // instead of attempting the request and failing every time
+    // so leave the popup with just its content already provided; the title
+    // link opens the guide on zeldadungeon.net in a new tab
     if (IS_LOCAL) {
-      this.showOfflinePanel();
+      // Offline copy of the map: the title already links to the article,
+      // so there is nothing else to load.
+      this.contentState = ContentState.Loaded;
       return;
     }
 
@@ -219,32 +221,6 @@ export class ZDPopup extends Popup {
       );
       this.loadContentFromQuery(query);
     }
-  }
-
-  private showOfflinePanel(): void {
-    const linkParts =
-      this.myOptions.link && this.myOptions.link !== ""
-        ? this.myOptions.link.split("#")
-        : [];
-    const article =
-      linkParts[0] ||
-      (this.myOptions.id
-        ? `Map:Breath of the Wild/${this.myOptions.id}`
-        : "");
-
-    DomUtil.empty(this.body);
-    const message = DomUtil.create("p", "zd-popup__offline", this.body);
-    message.innerText =
-      "This copy of the map isn't connected to the Zelda Dungeon Wiki. ";
-    if (article) {
-      const anchor = DomUtil.create("a", "", message);
-      anchor.setAttribute("target", "_blank");
-      anchor.setAttribute("rel", "noopener");
-      anchor.setAttribute("href", wikiArticleUrl(article));
-      anchor.innerText = `Read the ${this.myOptions.name} guide on zeldadungeon.net`;
-    }
-    this.contentState = ContentState.Loaded;
-    this.setContent(this.container); // force popup to resize/recenter
   }
 
   public markCompleted(): void {
