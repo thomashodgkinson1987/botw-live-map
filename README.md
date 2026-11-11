@@ -41,3 +41,11 @@ complete exactly as the save reports them; the save is the single source of
 truth, so manual ticks in those categories are overwritten. Nothing is ever
 written to the save file. The map is unaffected when `BOTW_SAVE_DIR` is unset or
 the save can't be read. See `tools/save-sync.md` for how the flag table was derived.
+
+## Live mode
+
+Savage Wind exposes a read-only control socket when started with:
+
+```sh
+SAVAGEWIND_CONTROL=7777 ./savagewind
+```
